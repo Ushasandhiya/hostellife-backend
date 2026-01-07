@@ -1,13 +1,16 @@
 const express = require("express");
+const cors = require("cors");
+
 const app = express();
 const PORT = 5000;
 
+app.use(cors());
 app.use(express.json());
 
 // In-memory announcements
 let announcements = [];
 
-// Root
+// Root route
 app.get("/", (req, res) => {
   res.send("🚀 HostelLife backend is running!");
 });
