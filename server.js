@@ -1,71 +1,77 @@
-console.log("MONGO_URI =", process.env.MONGO_URI);
-
-console.log("🔥 THIS IS THE SERVER FILE THAT IS RUNNING");
-
+require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-require("dotenv").config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-/* ---------------- MIDDLEWARE ---------------- */
+/* ---------- MIDDLEWARE ---------- */
 app.use(cors());
 app.use(express.json());
 
-/* ---------------- MONGODB CONNECT ---------------- */
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log("✅ MongoDB connected");
-  })
-  .catch((err) => {
-    console.error("❌ MongoDB connection error:", err);
-  });
+/* ---------- DB CONNECT ---------- */
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("✅ MongoDB connected"))
+  .catch(err => console.error("❌ Mongo error", err));
 
-/* ---------------- SCHEMA ---------------- */
+/* ---------- SCHEMAS ---------- */
 const announcementSchema = new mongoose.Schema({
   text: String,
   time: String
 });
+const Announcement = mongoose.model("Announcement", announcementSchema);
 
-const Announcement = mongoose.model(
-  "Announcement",
-  announcementSchema
-);
+const ratingSchema = new mongoose.Schema({
+  rating: { type: Number, min: 1, max: 5 },
+  date: String
+});
+const Rating = mongoose.model("Rating", ratingSchema);
 
-/* ---------------- ROUTES ---------------- */
+/* ---------- ROUTES ---------- */
 
-// Test route
+// test
 app.get("/", (req, res) => {
-  res.send("🚀 HostelLife backend is running!");
+  res.send("🚀 HostelLife backend running");
 });
 
-// GET announcements
+// announcements
 app.get("/api/announcements", async (req, res) => {
-  const announcements = await Announcement.find().sort({ _id: -1 });
-  res.json(announcements);
+  const data = await Announcement.find().sort({ _id: -1 });
+  res.json(data);
 });
 
-// POST announcement
 app.post("/api/announcements", async (req, res) => {
-  const { text } = req.body;
-
-  if (!text) {
-    return res.status(400).json({ message: "Text is required" });
-  }
-
-  const newAnnouncement = new Announcement({
-    text,
+  const a = new Announcement({
+    text: req.body.text,
     time: new Date().toLocaleString()
   });
-
-  await newAnnouncement.save();
-  res.status(201).json(newAnnouncement);
+  await a.save();
+  res.status(201).json(a);
 });
 
-/* ---------------- START SERVER ---------------- */
+// ⭐ RATINGS
+app.post("/api/ratings", async (req, res) => {
+  const { rating, date } = req.body;
+  if (!rating || !date) return res.status(400).json({ msg: "Missing data" });
+
+  const exists = await Rating.findOne({ date });
+  if (exists) return res.status(409).json({ msg: "Already rated" });
+
+  const r = new Rating({ rating, date });
+  await r.save();
+  res.status(201).json(r);
+});
+
+app.get("/api/ratings/stats", async (req, res) => {
+  const all = await Rating.find();
+  if (!all.length) return res.json({ avg: 0, count: 0 });
+
+  const avg = all.reduce((a, b) => a + b.rating, 0) / all.length;
+  res.json({ avg: avg.toFixed(1), count: all.length });
+});
+
+/* ---------- START SERVER LAST ---------- */
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`🔥 Server running on http://localhost:${PORT}`);
 });
