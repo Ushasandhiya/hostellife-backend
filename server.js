@@ -75,3 +75,15 @@ app.get("/api/ratings/stats", async (req, res) => {
 app.listen(PORT, () => {
   console.log(`🔥 Server running on http://localhost:${PORT}`);
 });
+// DELETE announcement
+app.delete("/api/announcements/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await Announcement.findByIdAndDelete(id);
+
+    res.json({ message: "Announcement deleted" });
+  } catch (err) {
+    res.status(500).json({ error: "Delete failed" });
+  }
+});
